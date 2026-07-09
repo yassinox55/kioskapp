@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../services/app_logger.dart';
 import '../services/kiosk_service.dart';
+import '../services/config_service.dart';
 import 'logs_screen.dart';
+import 'admin_login_screen.dart';
 
 /// Écran principal : affiche le site web en plein écran et active le mode kiosque
 class KioskScreen extends StatefulWidget {
@@ -13,14 +15,20 @@ class KioskScreen extends StatefulWidget {
 }
 
 class _KioskScreenState extends State<KioskScreen> {
-  late final WebViewController controller;
+  WebViewController? controller;
 
   @override
   void initState() {
     super.initState();
     AppLogger.instance.log("App démarrée");
+    _initWebView();
+  }
 
-    controller = WebViewController()
+  Future<void> _initWebView() async {
+    final url = await ConfigService.getUrl() ?? 'https://flutter.dev';
+    AppLogger.instance.log("URL chargée depuis la config: $url");
+
+    final ctrl = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..addJavaScriptChannel(
         'AppNetworkLogger',
@@ -43,7 +51,11 @@ class _KioskScreenState extends State<KioskScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse('https://flutter.dev'));
+      ..loadRequest(Uri.parse(url));
+
+    setState(() {
+      controller = ctrl;
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       KioskService.startKiosk();
@@ -51,6 +63,7 @@ class _KioskScreenState extends State<KioskScreen> {
   }
 
   Future<void> _injectNetworkLogger() async {
+    if (controller == null) return;
     const jsCode = """
       (function() {
         if (window.__kiosklockLoggerInstalled) return;
@@ -71,16 +84,20 @@ class _KioskScreenState extends State<KioskScreen> {
         };
       })();
     """;
-    await controller.runJavaScript(jsCode);
+    await controller!.runJavaScript(jsCode);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (controller == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
-            WebViewWidget(controller: controller),
+            WebViewWidget(controller: controller!),
             Positioned(
               top: 10,
               right: 10,
@@ -93,6 +110,20 @@ class _KioskScreenState extends State<KioskScreen> {
                   );
                 },
                 child: const Icon(Icons.build, color: Colors.white, size: 18),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 60,
+              child: FloatingActionButton.small(
+                heroTag: "adminButton",
+                backgroundColor: Colors.black54,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const AdminLoginScreen()),
+                  );
+                },
+                child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 18),
               ),
             ),
           ],

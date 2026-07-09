@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'screens/kiosk_screen.dart';
 import 'screens/config_screen.dart';
+import 'screens/login_screen.dart';
 import 'services/config_service.dart';
 
 void main() {
@@ -13,13 +13,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'kiosk',
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue), useMaterial3: true),
       home: const StartupScreen(),
     );
   }
 }
 
-/// Décide si on affiche la config ou directement le kiosque
 class StartupScreen extends StatelessWidget {
   const StartupScreen({super.key});
 
@@ -31,7 +32,7 @@ class StartupScreen extends StatelessWidget {
         if (!snapshot.hasData) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        return snapshot.data! ? const KioskScreen() : const ConfigScreen();
+        return snapshot.data! ? const LoginScreen() : const ConfigScreen();
       },
     );
   }
